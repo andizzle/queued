@@ -5,8 +5,7 @@ import (
 	"strings"
 
 	"net/http"
-
-	"queued/driver"
+	"queued/adapters"
 )
 
 type Tail struct {
@@ -23,11 +22,12 @@ type Tail struct {
 	client *http.Client
 }
 
-func (t *Tail) setClient() {
+func (t *Tail) SetClient() {
 	t.client = &http.Client{}
 }
 
-func (t Tail) Post(job driver.Job) error {
+func (t Tail) Post(job adapters.AJob) error {
+	log.Println(*job.GetJobID())
 	rep, err := t.client.Post(t.URL, t.ContentType, strings.NewReader(*job.GetBody()))
 
 	if err != nil {
@@ -38,8 +38,6 @@ func (t Tail) Post(job driver.Job) error {
 		// error
 		content := []byte{}
 		rep.Body.Read(content)
-
-		log.Fatal(content)
 	}
 
 	return nil
