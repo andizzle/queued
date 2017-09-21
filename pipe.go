@@ -1,23 +1,25 @@
 package main
 
-import "queued/driver"
+import (
+	"queued/adapters"
+)
 
 // Head interacts with the queue
 type Head interface {
-	Poll() ([]driver.Job, error)
-	Post(driver.Job) (string, error)
-	Delete(driver.Job) error
+	Poll() ([]adapters.AJob, error)
+	Post(adapters.AJob) (string, error)
+	Delete(adapters.AJob) error
 }
 
 // Tail interacts with the worker
 type Tail interface {
-	Post(driver.Job) error
+	Post(adapters.AJob) error
 }
 
 // Tube has a Head and a Tail
 type Tube struct {
-	head Head
-	tail Tail
+	Head Head
+	Tail Tail
 	// TODO: add in logger
 }
 
@@ -27,20 +29,22 @@ type Tube struct {
 func (t *Tube) Watch() {
 
 	for {
-		jobs, err := t.head.Poll()
+		jobs, err := t.Head.Poll()
 		if err != nil {
 			// TODO: recover
 		}
 
 		for _, job := range jobs {
-			error := t.tail.Post(job)
-			if error != nil {
-				// push the job back to the queue
-				t.head.Post(job)
-			} else {
-				// job is done, delete from the queue
-				t.head.Delete(job)
-			}
+			go func(job adapters.AJob) {
+				error := t.Tail.Post(job)
+				if error != nil {
+					// push the job back to the queue
+					t.Head.Post(job)
+				} else {
+					// job is done, delete from the queue
+					t.Head.Delete(job)
+				}
+			}(job)
 		}
 	}
 
