@@ -8,7 +8,7 @@ import (
 type Head interface {
 	Poll() ([]adapters.AJob, error)
 	Post(adapters.AJob) (string, error)
-	Delete(adapters.AJob) error
+	Delete(interface{}) error
 }
 
 // Tail interacts with the worker

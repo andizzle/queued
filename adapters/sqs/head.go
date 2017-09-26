@@ -11,11 +11,14 @@ import (
 	"queued/adapters"
 )
 
+const AZURL = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
+
 // Head listens to SQS
 type Head struct {
 	Queue       string
 	PollTimer   int64
 	MaxMessages int64
+	MaxTry      int64
 
 	client *sqs.SQS
 	region string
@@ -36,7 +39,10 @@ func (h *Head) RefreshToken() {
 
 // Poll retrieve the job from the queue
 func (h Head) Poll() ([]adapters.AJob, error) {
+	All := "All"
+
 	output, err := h.client.ReceiveMessage(&sqs.ReceiveMessageInput{
+		AttributeNames:      []*string{&All},
 		QueueUrl:            &h.Queue,
 		WaitTimeSeconds:     &h.PollTimer,
 		MaxNumberOfMessages: &h.MaxMessages,
@@ -47,7 +53,7 @@ func (h Head) Poll() ([]adapters.AJob, error) {
 		log.Fatal(err)
 	}
 
-	jobs := make([]adapters.AJob, len(output.Messages))
+	jobs := []adapters.AJob{}
 	for id, msg := range output.Messages {
 		job := Job{msg}
 		jobs[id] = job
@@ -63,6 +69,15 @@ func (h Head) Post(job adapters.AJob) (string, error) {
 }
 
 // Delete remove the job from the queue for good
-func (h Head) Delete(job adapters.AJob) error {
+func (h Head) Delete(job Job) error {
+	_, err := h.client.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      &h.Queue,
+		ReceiptHandle: job.GetReceiptHandle(),
+	})
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

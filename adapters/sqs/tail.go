@@ -12,7 +12,6 @@ type Tail struct {
 	URL         string
 	Port        int
 	Path        string
-	MaxTry      int
 	MimeType    string
 	KeepAlive   bool
 	WaitTime    int
